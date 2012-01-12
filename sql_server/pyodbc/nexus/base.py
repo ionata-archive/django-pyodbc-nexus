@@ -37,10 +37,10 @@ elif DjangoVersion[0] == 1:
 else:
     _DJANGO_VERSION = 9
     
-from sql_server.pyodbc.operations import DatabaseOperations
-from sql_server.pyodbc.client import DatabaseClient
-from sql_server.pyodbc.creation import DatabaseCreation
-from sql_server.pyodbc.introspection import DatabaseIntrospection
+from sql_server.pyodbc.nexus.operations import DatabaseOperations
+from sql_server.pyodbc.nexus.client import DatabaseClient
+from sql_server.pyodbc.nexus.creation import DatabaseCreation
+from sql_server.pyodbc.nexus.introspection import DatabaseIntrospection
 import os
 import warnings
 
@@ -74,9 +74,8 @@ IntegrityError = Database.IntegrityError
 class DatabaseFeatures(BaseDatabaseFeatures):
     uses_custom_query_class = True
     can_use_chunked_reads = False
-    can_return_id_from_insert = True
-    #uses_savepoints = True
-
+    supports_forward_references = False
+    can_defer_constraint_checks = False
 
 class DatabaseWrapper(BaseDatabaseWrapper):
     drv_name = None
@@ -231,32 +230,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         cursor = self.connection.cursor()
         if new_conn:
-            # Set date format for the connection. Also, make sure Sunday is
-            # considered the first day of the week (to be consistent with the
-            # Django convention for the 'week_day' Django lookup) if the user
-            # hasn't told us otherwise
-            cursor.execute("SET DATEFORMAT ymd; SET DATEFIRST %s" % self.datefirst)
-            if self.ops.sql_server_ver < 2005:
-                self.creation.data_types['TextField'] = 'ntext'
-                self.features.can_return_id_from_insert = False
-
-            if self.driver_needs_utf8 is None:
-                self.driver_needs_utf8 = True
-                self.drv_name = self.connection.getinfo(Database.SQL_DRIVER_NAME).upper()
-                if self.drv_name in ('SQLSRV32.DLL', 'SQLNCLI.DLL', 'SQLNCLI10.DLL'):
-                    self.driver_needs_utf8 = False
-
-                # http://msdn.microsoft.com/en-us/library/ms131686.aspx
-                if self.ops.sql_server_ver >= 2005 and self.drv_name in ('SQLNCLI.DLL', 'SQLNCLI10.DLL') and self.MARS_Connection:
-                    # How to to activate it: Add 'MARS_Connection': True
-                    # to the DATABASE_OPTIONS dictionary setting
-                    self.features.can_use_chunked_reads = True
-
-            # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
-            # in multi-statement, so we need to commit the above SQL sentence(s)
-            # to avoid this
-            if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
-                self.connection.commit()
+            pass
 
         return CursorWrapper(cursor, self.driver_needs_utf8)
 

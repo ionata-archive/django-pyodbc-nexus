@@ -2,10 +2,10 @@
 
 from distutils.core import setup
 
-setup(name='sql_server.pyodbc',
+setup(name='sql_server.pyodbc.nexus',
       version='1.0',
-      description='Django MS SQL Server backends using pyodbc',
-      author='django-pyodbc team',
-      url='http://code.google.com/p/django-pyodbc',
-      packages=['sql_server', 'sql_server.pyodbc', 'sql_server.extra'],
+      description='Django NexusDB using pyodbc',
+      author='Ionata Web Solutions',
+      url='https://bitbucket.org/ionata/django-pyodbc-nexus',
+      packages=['sql_server', 'sql_server.pyodbc', 'sql_server.pyodbc.nexus', 'sql_server.extra'],
      )

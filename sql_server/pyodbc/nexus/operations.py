@@ -1,33 +1,18 @@
 from django.db.backends import BaseDatabaseOperations
-from sql_server.pyodbc import query
+from sql_server.pyodbc.nexus import query
 import datetime
 import time
 import decimal
 
 class DatabaseOperations(BaseDatabaseOperations):
-    compiler_module = "sql_server.pyodbc.compiler"
+    compiler_module = "sql_server.pyodbc.nexus.compiler"
     def __init__(self, connection):
         super(DatabaseOperations, self).__init__()
         self.connection = connection
         self._ss_ver = None
 
-    def _get_sql_server_ver(self):
-        """
-        Returns the version of the SQL Server in use:
-        """
-        if self._ss_ver is not None:
-            return self._ss_ver
-        cur = self.connection.cursor()
-        cur.execute("SELECT CAST(SERVERPROPERTY('ProductVersion') as varchar)")
-        ver_code = int(cur.fetchone()[0].split('.')[0])
-        if ver_code >= 10:
-            self._ss_ver = 2008
-        elif ver_code == 9:
-            self._ss_ver = 2005
-        else:
-            self._ss_ver = 2000
-        return self._ss_ver
-    sql_server_ver = property(_get_sql_server_ver)
+    # TODO Work out how to find this out, if it is required
+    sql_server_ver = 1
 
     def date_extract_sql(self, lookup_type, field_name):
         """
@@ -79,23 +64,8 @@ class DatabaseOperations(BaseDatabaseOperations):
         This method also receives the table name and the name of the primary-key
         column.
         """
-        # TODO: Check how the `last_insert_id` is being used in the upper layers
-        #       in context of multithreaded access, compare with other backends
-
-        # IDENT_CURRENT:  http://msdn2.microsoft.com/en-us/library/ms175098.aspx
-        # SCOPE_IDENTITY: http://msdn2.microsoft.com/en-us/library/ms190315.aspx
-        # @@IDENTITY:     http://msdn2.microsoft.com/en-us/library/ms187342.aspx
-
-        # IDENT_CURRENT is not limited by scope and session; it is limited to
-        # a specified table. IDENT_CURRENT returns the value generated for
-        # a specific table in any session and any scope.
-        # SCOPE_IDENTITY and @@IDENTITY return the last identity values that
-        # are generated in any table in the current session. However,
-        # SCOPE_IDENTITY returns values inserted only within the current scope;
-        # @@IDENTITY is not limited to a specific scope.
-
         table_name = self.quote_name(table_name)
-        cursor.execute("SELECT CAST(IDENT_CURRENT(%s) as bigint)", [table_name])
+        cursor.execute("SELECT LASTAUTOINC")
         return cursor.fetchone()[0]
 
     def fetch_returned_insert_id(self, cursor):
@@ -125,9 +95,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         Returns a quoted version of the given table, index or column name. Does
         not quote the given name if it's already been quoted.
         """
-        if name.startswith('[') and name.endswith(']'):
+        if name.startswith('"') and name.endswith('"'):
             return name # Quoting once is enough.
-        return '[%s]' % name
+        return '"%s"' % name
 
     def random_function_sql(self):
         """
@@ -239,7 +209,12 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         Returns the SQL statement required to start a transaction.
         """
-        return "BEGIN TRANSACTION"
+        return "START TRANSACTION;"
+
+    def end_transaction_sql(self, success=True):
+        if not success:
+            return "ROLLBACK;"
+        return "COMMIT;"
 
     def sql_for_tablespace(self, tablespace, inline=False):
         """
@@ -266,10 +241,11 @@ class DatabaseOperations(BaseDatabaseOperations):
         Transform a datetime value to an object compatible with what is expected
         by the backend driver for datetime columns.
         """
+        print value
         if value is None:
             return None
-        # SQL Server doesn't support microseconds
-        return value.replace(microsecond=0)
+        
+        return value.strftime('%Y-%m-%d %H:%M:%S')
 
     def value_to_db_time(self, value):
         """
@@ -280,8 +256,8 @@ class DatabaseOperations(BaseDatabaseOperations):
             return None
         # SQL Server doesn't support microseconds
         if isinstance(value, basestring):
-            return datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
-        return datetime.datetime(1900, 1, 1, value.hour, value.minute, value.second)
+            value = datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
+        return value.strftime('%H:%M:%S')
 
     def year_lookup_bounds(self, value):
         """
@@ -339,4 +315,3 @@ class DatabaseOperations(BaseDatabaseOperations):
         elif value is not None and field and field.get_internal_type() == 'FloatField':
             value = float(value)
         return value
-        

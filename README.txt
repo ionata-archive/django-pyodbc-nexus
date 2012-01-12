@@ -1,9 +1,8 @@
-=============
-django-pyodbc
-=============
+===================
+django-pyodbc-nexus
+===================
 
-A Django_ MS SQL Server external DB backend that uses ODBC by employing
-the pyodbc_ library. It supports SQL Server 2000 and 2005.
+A Django_ Nexus DB backend that uses ODBC by employing the pyodbc_ library.
 
 .. _Django: http://djangoproject.com/
 .. _pyodbc: http://pyodbc.sourceforge.net
@@ -30,7 +29,7 @@ Installation
  1. Install pyodbc.
 
  2. Add the directory where you have copied the project files to your Python
-    path. So, for example, if you have the following directory structure::
+	path. So, for example, if you have the following directory structure::
 
         /home/user/src/django-pyodbc
             |
@@ -135,3 +134,4 @@ Credits
 * Filip Wasilewski (http://code.djangoproject.com/ticket/5246)
 * Wei guangjing `<http://djangopeople.net/vcc/>`_
 * mamcx (http://code.djangoproject.com/ticket/5062)
+* Tim Heap `<http://bitbucket.org/ionata/django-pyodbc-nexus>`_

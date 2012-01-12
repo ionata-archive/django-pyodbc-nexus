@@ -27,7 +27,6 @@ class Command(BaseCommand):
 
     def __init__(self):
         super(Command, self).__init__()
-        self.in_disabled_constraints = False
         self.model_name = None
         self.tables = set()
 
@@ -69,7 +68,7 @@ class Command(BaseCommand):
             transaction.enter_transaction_management()
             transaction.managed(True)
 
-        self.disable_forward_ref_checks()
+        self.disable_forward_ref_checks(cursor)
 
         class SingleZipReader(zipfile.ZipFile):
             def __init__(self, *args, **kwargs):
@@ -162,7 +161,6 @@ class Command(BaseCommand):
                                     objects = serializers.deserialize(format, fixture)
                                     for obj in objects:
                                         objects_in_fixture += 1
-                                        self.handle_ref_checks(cursor, obj)
                                         models.add(obj.object.__class__)
                                         obj.save()
                                     object_count += objects_in_fixture
@@ -232,43 +230,10 @@ class Command(BaseCommand):
         if commit:
             connection.close()
 
-    def disable_forward_ref_checks(self):
-        self.in_disabled_constraints = True
+    def disable_forward_ref_checks(self, cursor):
+        print "Disabling foreign key checks"
+        cursor.execute('SET foreign_key_checks = 0;')
 
     def enable_forward_ref_checks(self, cursor):
-        # re-activate constraint checks for any remaining table
-        # and force a check
-        # See also 'DBCC CHECKCONSTRAINTS(%s) WITH NO_INFOMSGS'
-        for t in self.tables:
-            cursor.execute('ALTER TABLE [%s] WITH CHECK CHECK CONSTRAINT ALL' % t)
-        self.tables.clear()
-        self.in_disabled_constraints = False
-
-    def handle_ref_checks(self, cursor, obj):
-        mobj = obj.object
-        if self.in_disabled_constraints:
-            # Should we re-activate constraint checks for any table back?
-            #if self.model_name is not None and mobj.__class__ != self.model_name:
-            #    for t in self.tables:
-            #        cursor.execute('ALTER TABLE [%s] WITH CHECK CHECK CONSTRAINT ALL' % t)
-            #    self.tables.clear()
-
-            # A model transition is underway in the fixture
-            if self.model_name is None or mobj.__class__ != self.model_name:
-                # Should we de-activate constraint checks for any table?. Check
-                # if the model has any FK defined
-                has_outgoing_fks = False
-                for f in mobj._meta.fields:
-                    if f.rel:
-                        has_outgoing_fks = True
-                # Also check for m2m fields and take in account its intermediate tables
-                # XXX: What about _meta.many_to_many?
-                # XXX: Take in account the m2m with 'through' option case
-                for f in mobj._meta.local_many_to_many:
-                    cursor.execute('ALTER TABLE [%s] NOCHECK CONSTRAINT ALL' % f.m2m_db_table())
-                    self.tables.add(f.m2m_db_table())
-
-                if has_outgoing_fks:
-                    cursor.execute('ALTER TABLE [%s] NOCHECK CONSTRAINT ALL' % mobj._meta.db_table)
-                    self.tables.add(mobj._meta.db_table)
-        self.model_name = mobj.__class__
+        print "Enabling foreign key checks"
+        cursor.execute('SET foreign_key_checks = 0;')
