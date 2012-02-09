@@ -236,16 +236,25 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         return x
 
+    def value_to_db_date(self, value):
+        """
+        Transform a date value to an object compatible with what is expected
+        by the backend driver for date columns.
+        """
+        if value is None:
+            return None
+        
+        return value
+
     def value_to_db_datetime(self, value):
         """
         Transform a datetime value to an object compatible with what is expected
         by the backend driver for datetime columns.
         """
-        print value
         if value is None:
             return None
         
-        return value.strftime('%Y-%m-%d %H:%M:%S')
+        return value
 
     def value_to_db_time(self, value):
         """
@@ -257,7 +266,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         # SQL Server doesn't support microseconds
         if isinstance(value, basestring):
             value = datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
-        return value.strftime('%H:%M:%S')
+        return value
 
     def year_lookup_bounds(self, value):
         """
@@ -295,12 +304,26 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         if value is None:
             return None
+
         if field and field.get_internal_type() == 'DateTimeField':
             return value
         elif field and field.get_internal_type() == 'DateField':
-            value = value.date() # extract date
+            if isinstance(value, datetime.datetime):
+                value = value.date() # extract date
         elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime.datetime) and value.year == 1900 and value.month == value.day == 1):
-            value = value.time() # extract time
+            if isinstance(value, basestring):
+                try:
+                    value = datetime.datetime.strptime(value, "%I:%M:%S %p").time()
+                except ValueError:
+                    try:
+                        value = datetime.datetime.strptime(value, "%H:%M:%S").time()
+                    except ValueError:
+                        raise ValueError("Could not parse time string from database: %s" % value)
+            else:
+                try:
+                    value = value.time() # extract time
+                except:
+                    raise ValueError("Value from database does not implement `time()`: %s" % value)
         # Some cases (for example when select_related() is used) aren't
         # caught by the DateField case above and date fields arrive from
         # the DB as datetime instances.

@@ -105,12 +105,26 @@ def query_class(QueryClass):
             """
             if value is None:
                 return None
+
             if field and field.get_internal_type() == 'DateTimeField':
                 return value
             elif field and field.get_internal_type() == 'DateField':
                 value = value.date() # extract date
             elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime) and value.year == 1900 and value.month == value.day == 1):
-                value = value.time() # extract time
+                if isinstance(value, basestring):
+                    try:
+                        value = datetime.strptime(value, "%I:%M:%S %p").time()
+                    except ValueError:
+                        try:
+                            value = datetime.strptime(value, "%H:%M:%S").time()
+                        except ValueError:
+                            raise ValueError("Could not parse time string from database: %s" % value)
+                else:
+                    try:
+                        value = value.time() # extract time
+                    except:
+                        raise ValueError("Value from database does not implement `time()`: %s" % value)
+                        
             # Some cases (for example when select_related() is used) aren't
             # caught by the DateField case above and date fields arrive from
             # the DB as datetime instances.
