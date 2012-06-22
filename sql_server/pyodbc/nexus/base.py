@@ -21,7 +21,9 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1,2) :
+if DjangoVersion[:2] == (1,4):
+    _DJANGO_VERSION = 14
+elif DjangoVersion[:2] == (1,2) :
     from django import get_version
     version_str = get_version()
     if 'SVN' in version_str and int(version_str.split('SVN-')[-1]) < 11952: # django trunk revision 11952 Added multiple database support.
@@ -53,7 +55,7 @@ if hasattr(settings, 'DATABASE_COLLATION'):
         DeprecationWarning
     )
     collation = settings.DATABASE_COLLATION
-elif 'collation' in settings.DATABASE_OPTIONS:
+elif hasattr(settings, 'DATABASE_OPTIONS') and 'collation' in settings.DATABASE_OPTIONS:
     collation = settings.DATABASE_OPTIONS['collation']
 
 deprecated = (
@@ -78,6 +80,8 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     can_defer_constraint_checks = False
 
 class DatabaseWrapper(BaseDatabaseWrapper):
+    _DJANGO_VERSION = _DJANGO_VERSION
+
     drv_name = None
     driver_needs_utf8 = None
     MARS_Connection = False
