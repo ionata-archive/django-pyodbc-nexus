@@ -230,16 +230,14 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def prep_for_like_query(self, x):
         """Prepares a value for use in a LIKE query."""
-        from django.utils.encoding import smart_unicode
-        # http://msdn2.microsoft.com/en-us/library/ms179859.aspx
-        return smart_unicode(x).replace('\\', '\\\\').replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
+        unicodedata.normalize('NFKD', x).encode('ascii','ignore').replace('\\', '\\\\').replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
 
     def prep_for_iexact_query(self, x):
         """
         Same as prep_for_like_query(), but called for "iexact" matches, which
         need not necessarily be implemented using "LIKE" in the backend.
         """
-        return x
+        return unicodedata.normalize('NFKD', x).encode('ascii', 'ignore')
 
     def value_to_db_date(self, value):
         """
