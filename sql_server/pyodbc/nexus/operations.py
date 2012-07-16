@@ -309,11 +309,20 @@ class DatabaseOperations(BaseDatabaseOperations):
             return None
 
         if field and field.get_internal_type() == 'DateTimeField':
+            if value is '':
+                return None
             return value
+
         elif field and field.get_internal_type() == 'DateField':
+            if value is '':
+                return None
             if isinstance(value, datetime.datetime):
                 value = value.date() # extract date
+
         elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime.datetime) and value.year == 1900 and value.month == value.day == 1):
+            if value is '':
+                return None
+
             if isinstance(value, basestring):
                 try:
                     value = datetime.datetime.strptime(value, "%I:%M:%S %p").time()
