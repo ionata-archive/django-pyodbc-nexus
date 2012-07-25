@@ -76,9 +76,6 @@ def query_class(QueryClass):
             if meta.pk.db_column in self.columns and meta.pk.__class__.__name__ == "AutoField":
                 if len(self.columns) == 1 and not params:
                     sql = "INSERT INTO %s DEFAULT VALUES" % quoted_table
-                else:
-                    sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
-                        (quoted_table, sql, quoted_table)
 
             return sql, params
 
