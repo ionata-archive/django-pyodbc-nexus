@@ -309,6 +309,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         separate Date and Time data types.
         TODO: See how we'll handle this for SQL Server >= 2008
         """
+        
         if value is None:
             return None
 
