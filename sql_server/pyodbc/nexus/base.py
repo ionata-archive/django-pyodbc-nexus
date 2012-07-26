@@ -83,7 +83,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     _DJANGO_VERSION = _DJANGO_VERSION
 
     drv_name = None
-    driver_needs_utf8 = None
+    driver_needs_utf8 = True
     MARS_Connection = False
     unicode_results = False
     datefirst = 7
