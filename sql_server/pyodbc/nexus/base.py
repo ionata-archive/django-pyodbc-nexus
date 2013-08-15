@@ -236,7 +236,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if new_conn:
             pass
 
-        return CursorWrapper(cursor, self.driver_needs_utf8)
+        cursor_kwargs = {'driver_needs_utf8': self.driver_needs_utf8}
+        if 'passwords' in options:
+            cursor_kwargs['passwords'] = options['passwords']
+
+        return CursorWrapper(cursor, **cursor_kwargs)
 
 
 class CursorWrapper(object):
@@ -244,11 +248,41 @@ class CursorWrapper(object):
     A wrapper around the pyodbc's cursor that takes in account a) some pyodbc
     DB-API 2.0 implementation and b) some common ODBC driver particularities.
     """
-    def __init__(self, cursor, driver_needs_utf8):
+    def __init__(self, cursor, driver_needs_utf8, passwords=[]):
         self.cursor = cursor
         self.driver_needs_utf8 = driver_needs_utf8
         self.last_sql = ''
         self.last_params = ()
+
+        for password in passwords:
+            set_password = "SET PASSWORDS ADD '{0}'".format(
+                self._escape_password(password))
+            self.execute(set_password)
+
+
+    def _escape_password(self, password):
+        """
+        Yes, I know, this is terrible and I should use parameterised queries.
+        Something in the CursorWrapper → cursor → pyodbc → odbc → nexusdb layer
+        fails when attempting to parameterise passwords though, and I can not
+        (be bothered to) find it. Instead, string munging!
+
+        Given that this password is set in the site config though, it should be
+        mostly safe.
+
+        I think.
+        """
+        replacements = (
+            # % is the parameterisation token - replace with %%
+            ("%", "%%"),
+            ("\\", "\\\\"),
+            ("'", "\\'"),
+        )
+
+        # Oh, for a more useable `fold` implementation...
+        for old, new in replacements:
+            password = password.replace(old, new)
+        return password
 
     def format_sql(self, sql, n_params=None):
         if self.driver_needs_utf8 and isinstance(sql, unicode):
