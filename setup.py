@@ -2,8 +2,8 @@
 
 from distutils.core import setup
 
-setup(name='sql_server.pyodbc.nexus',
-      version='1.0',
+setup(name='django-pyodbc-nexus',
+      version='1.1',
       description='Django NexusDB using pyodbc',
       author='Ionata Web Solutions',
       url='https://bitbucket.org/ionata/django-pyodbc-nexus',
